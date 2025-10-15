@@ -6,7 +6,7 @@
           MarData
         </h1>
         <p class="text-foam-600 text-lg">
-          Análise de dados inteligente para tráfego pago
+          Análise de dados inteligente para marketing digital
         </p>
       </div>
 
@@ -109,12 +109,15 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuth } from '@/composables/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 const router = useRouter()
+const { login, loginWithGoogle } = useAuth()
+
 const email = ref('')
 const password = ref('')
 const isLoading = ref(false)
@@ -126,14 +129,27 @@ async function handleLogin() {
   }
 
   isLoading.value = true
-
-  setTimeout(() => {
-    isLoading.value = false
+  try {
+    await login(email.value, password.value)
     router.push('/')
-  }, 1000)
+  } catch (error) {
+    alert('Falha no login')
+    console.error(error)
+  } finally {
+    isLoading.value = false
+  }
 }
 
 async function handleGoogleLogin() {
-  router.push('/')
+  isLoading.value = true
+  try {
+    await loginWithGoogle()
+    router.push('/')
+  } catch (error) {
+    alert('Falha no login com Google')
+    console.error(error)
+  } finally {
+    isLoading.value = false
+  }
 }
 </script>

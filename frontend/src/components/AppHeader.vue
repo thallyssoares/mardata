@@ -10,7 +10,7 @@
             <span class="text-2xl font-bold text-ocean-800">MarData</span>
           </router-link>
 
-          <nav class="hidden md:flex space-x-6">
+          <nav v-if="isAuthenticated" class="hidden md:flex space-x-6">
             <router-link
               to="/"
               class="text-foam-700 hover:text-ocean-600 font-medium transition-colors"
@@ -26,7 +26,7 @@
           </nav>
         </div>
 
-        <div class="flex items-center space-x-4">
+        <div v-if="isAuthenticated" class="flex items-center space-x-4">
           <Button
             variant="ghost"
             size="sm"
@@ -56,7 +56,7 @@
             </svg>
           </button>
 
-          <Avatar class="cursor-pointer ring-2 ring-ocean-200 hover:ring-ocean-400 transition-all">
+          <Avatar @click="handleLogout" title="Clique para sair" class="cursor-pointer ring-2 ring-ocean-200 hover:ring-ocean-400 transition-all">
             <AvatarImage src="https://github.com/radix-vue.png" alt="User" />
             <AvatarFallback class="bg-ocean-gradient text-white font-semibold">
               U
@@ -71,8 +71,19 @@
 <script setup>
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { useAuth } from '@/composables/useAuth'
+import { useRouter } from 'vue-router'
+
+const { logout, isAuthenticated } = useAuth()
+const router = useRouter()
 
 function toggleMobileMenu() {
+  // TODO: Implement mobile menu logic if needed
   console.log('Mobile menu toggle')
+}
+
+function handleLogout() {
+  logout()
+  router.push('/login')
 }
 </script>
