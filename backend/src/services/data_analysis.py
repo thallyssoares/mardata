@@ -16,6 +16,10 @@ def generate_descriptive_analysis(df: pd.DataFrame) -> Dict[str, Any]:
     """
     analysis_output = {}
 
+    # Add direct, reliable information about the DataFrame
+    analysis_output['total_records'] = len(df)
+    analysis_output['all_columns'] = df.columns.tolist()
+
     # 1. Basic Info (dtypes, non-null counts)
     # Using a string buffer to capture the output of df.info()
     import io
