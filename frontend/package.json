@@ -15,6 +15,7 @@
     "lint": "run-s lint:*"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.75.0",
     "@tailwindcss/postcss": "^4.1.14",
     "@vueuse/core": "^13.9.0",
     "class-variance-authority": "^0.7.1",
