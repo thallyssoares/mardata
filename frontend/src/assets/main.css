@@ -1,3 +1,93 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --color-ocean-50: #E3F2FD;
+  --color-ocean-100: #BBDEFB;
+  --color-ocean-200: #90CAF9;
+  --color-ocean-300: #64B5F6;
+  --color-ocean-400: #42A5F5;
+  --color-ocean-500: #1E88E5;
+  --color-ocean-600: #1976D2;
+  --color-ocean-700: #1565C0;
+  --color-ocean-800: #0D47A1;
+  --color-ocean-900: #0A0E27;
+
+  --color-wave-50: #E1F5FE;
+  --color-wave-100: #B3E5FC;
+  --color-wave-200: #81D4FA;
+  --color-wave-300: #4FC3F7;
+  --color-wave-400: #29B6F6;
+  --color-wave-500: #03A9F4;
+  --color-wave-600: #039BE5;
+  --color-wave-700: #0288D1;
+  --color-wave-800: #0277BD;
+  --color-wave-900: #01579B;
+
+  --color-navy-50: #E8EAF6;
+  --color-navy-100: #C5CAE9;
+  --color-navy-200: #9FA8DA;
+  --color-navy-300: #7986CB;
+  --color-navy-400: #5C6BC0;
+  --color-navy-500: #3F51B5;
+  --color-navy-600: #3949AB;
+  --color-navy-700: #303F9F;
+  --color-navy-800: #283593;
+  --color-navy-900: #1A237E;
+
+  --color-foam-50: #FAFAFA;
+  --color-foam-100: #F5F5F5;
+  --color-foam-200: #EEEEEE;
+  --color-foam-300: #E0E0E0;
+  --color-foam-400: #BDBDBD;
+  --color-foam-500: #9E9E9E;
+  --color-foam-600: #757575;
+  --color-foam-700: #616161;
+  --color-foam-800: #424242;
+  --color-foam-900: #212121;
+
+  --font-sans: Inter, system-ui, -apple-system, sans-serif;
+
+  --shadow-ocean-sm: 0 1px 2px 0 rgba(30, 136, 229, 0.05);
+  --shadow-ocean-md: 0 4px 6px -1px rgba(30, 136, 229, 0.1), 0 2px 4px -1px rgba(30, 136, 229, 0.06);
+  --shadow-ocean-lg: 0 10px 15px -3px rgba(30, 136, 229, 0.1), 0 4px 6px -2px rgba(30, 136, 229, 0.05);
+  --shadow-ocean-xl: 0 20px 25px -5px rgba(30, 136, 229, 0.1), 0 10px 10px -5px rgba(30, 136, 229, 0.04);
+
+  @keyframes wave {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  @keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    0% { transform: translateY(10px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+
+  @keyframes slideDown {
+    0% { transform: translateY(-10px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+
+  --animate-wave: wave 3s ease-in-out infinite;
+  --animate-fade-in: fadeIn 0.3s ease-in-out;
+  --animate-slide-up: slideUp 0.3s ease-out;
+  --animate-slide-down: slideDown 0.3s ease-out;
+}
+
+.ocean-gradient {
+  background: linear-gradient(135deg, #1E88E5 0%, #4FC3F7 100%);
+}
+
+.ocean-gradient-subtle {
+  background: linear-gradient(135deg, #E3F2FD 0%, #E1F5FE 100%);
+}
+
+.wave-pattern {
+  background-image: radial-gradient(circle at 25% 25%, rgba(30, 136, 229, 0.05) 0%, transparent 50%),
+                    radial-gradient(circle at 75% 75%, rgba(79, 195, 247, 0.05) 0%, transparent 50%);
+}
