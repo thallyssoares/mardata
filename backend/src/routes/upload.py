@@ -4,7 +4,7 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from ..services.data_processing import clean_data
 from ..services.data_analysis import generate_descriptive_analysis
 from ..services.ai_service import get_ai_insights
-from ..main import sessions
+from ..state import sessions
 
 router = APIRouter()
 

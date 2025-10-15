@@ -1,17 +1,24 @@
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from .routes import upload, chat
-from typing import Dict
-
-# In-memory store for analysis sessions. 
-# This will be imported by other modules to share state.
-sessions: Dict[str, Dict] = {}
+from .state import sessions
 
 app = FastAPI(
     title="MarData API",
     description="API for the MarData platform, providing data analysis as a service.",
     version="0.1.0",
 )
+
+# Set up CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
+
 
 # Include the routers
 app.include_router(upload.router, prefix="/api", tags=["Data Upload & Analysis"])

@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, Body
 from typing import Dict, List
 
 # Import the shared sessions dictionary from the main application module
-from ..main import sessions
+from ..state import sessions
 from ..services import ai_service
 
 router = APIRouter()
