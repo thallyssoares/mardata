@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import apiClient from '@/lib/apiClient'
 
 export function useChat() {
   const messages = ref([])
@@ -13,31 +14,20 @@ export function useChat() {
     })
   }
 
-  const sendMessage = async (text, sessionId) => {
+  const sendMessage = async (text, notebookId) => {
     if (!text.trim()) return
 
     addMessage('User', text)
     isLoading.value = true
 
     try {
-      const response = await fetch(`http://localhost:8000/api/chat/${sessionId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ question: text }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.detail || 'Failed to get AI response')
-      }
-
-      const result = await response.json()
+      const response = await apiClient.post(`/chat/${notebookId}`, { question: text })
+      const result = response.data
       addMessage('AI', result.answer)
     } catch (error) {
       console.error('Error sending message:', error)
-      addMessage('System', `Error: ${error.message}`)
+      const errorMessage = error.response?.data?.detail || error.message
+      addMessage('System', `Error: ${errorMessage}`)
     } finally {
       isLoading.value = false
     }

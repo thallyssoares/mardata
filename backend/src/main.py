@@ -1,8 +1,7 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routes import upload, chat
-from .state import sessions
+from .routes import upload, chat, auth
 
 app = FastAPI(
     title="MarData API",
@@ -23,6 +22,7 @@ app.add_middleware(
 # Include the routers
 app.include_router(upload.router, prefix="/api", tags=["Data Upload & Analysis"])
 app.include_router(chat.router, prefix="/api", tags=["Interactive Chat"])
+app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 
 @app.get("/", tags=["Health Check"])
 async def read_root():

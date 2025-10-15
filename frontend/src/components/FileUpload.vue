@@ -169,6 +169,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 
+import apiClient from '@/lib/apiClient';
+
 const selectedFiles = ref([])
 const businessProblem = ref('')
 const isDragging = ref(false)
@@ -204,29 +206,27 @@ async function uploadFiles() {
   formData.append('business_problem', businessProblem.value)
 
   try {
-    const response = await fetch('http://localhost:8000/api/upload/', {
-      method: 'POST',
-      body: formData,
-    })
+    // Axios will automatically handle the FormData content type
+    const response = await apiClient.post('/upload/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
 
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.detail || 'File upload failed')
-    }
-
-    const result = await response.json()
+    const result = response.data;
     emits('files-uploaded', {
       files: selectedFiles.value,
-      sessionId: result.session_id,
+      notebook_id: result.notebook_id, // Use the correct key from the backend
       aiInsight: result.ai_insight,
-    })
-    selectedFiles.value = []
-    businessProblem.value = ''
+    });
+    selectedFiles.value = [];
+    businessProblem.value = '';
   } catch (error) {
-    console.error('Error uploading files:', error)
-    alert(`Erro: ${error.message}`)
+    console.error('Error uploading files:', error);
+    const errorMessage = error.response?.data?.detail || error.message;
+    alert(`Erro: ${errorMessage}`);
   } finally {
-    isUploading.value = false
+    isUploading.value = false;
   }
 }
 </script>
