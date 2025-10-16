@@ -39,14 +39,14 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onUnmounted } from 'vue';
 import AppHeader from '@/components/AppHeader.vue';
 import ChatSidebar from '@/components/ChatSidebar.vue';
 import ChatMessages from '@/components/ChatMessages.vue';
 import ChatInput from '@/components/ChatInput.vue';
 import { useChat } from '@/composables/useChat';
 
-const { messages, isLoading, sendMessage, addMessage } = useChat();
+const { messages, isLoading, sendMessage, addMessage, connectWebSocket, disconnectWebSocket } = useChat();
 
 const uploadedFiles = ref([]);
 const notebookId = ref(null);
@@ -58,11 +58,14 @@ async function handleFilesUploaded(data) {
   uploadedFiles.value = data.files;
   notebookId.value = data.notebook_id;
 
+  // Connect to WebSocket
+  connectWebSocket(data.notebook_id);
+
   addMessage(
     'System',
-    `Upload concluído: ${data.files.length} arquivo(s) - ${data.files.map(f => f.name).join(', ')}`
+    `Upload concluído. Iniciando análise para: ${data.files.map(f => f.name).join(', ')}`
   );
-  addMessage('AI', data.aiInsight);
+  addMessage('AI', 'Estou analisando os dados... Isso pode levar um momento.', 'progress');
 }
 
 async function handleSendMessage(userMessageText) {
@@ -70,7 +73,11 @@ async function handleSendMessage(userMessageText) {
     addMessage('System', 'Por favor, faça o upload de um arquivo antes de conversar.');
     return;
   }
-  // The useChat composable now handles adding the user message and the API call
   await sendMessage(userMessageText, notebookId.value);
 }
+
+// Disconnect from WebSocket when the component is unmounted
+onUnmounted(() => {
+  disconnectWebSocket();
+});
 </script>

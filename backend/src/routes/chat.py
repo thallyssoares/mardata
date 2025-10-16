@@ -1,5 +1,5 @@
 
-from fastapi import APIRouter, HTTPException, Body, Depends
+from fastapi import APIRouter, HTTPException, Body, Depends, WebSocket, WebSocketDisconnect
 from typing import List
 from supabase import Client
 
@@ -7,8 +7,22 @@ from ..services import ai_service
 from ..lib.dependencies import get_current_user
 from ..lib.supabase_client import get_supabase_client
 from ..models.user import User
+from ..lib.websocket_manager import manager
+
 
 router = APIRouter()
+
+@router.websocket("/ws/chat/{notebook_id}")
+async def websocket_endpoint(websocket: WebSocket, notebook_id: str):
+    await manager.connect(websocket, notebook_id)
+    try:
+        while True:
+            # The backend will send messages, so we just keep the connection alive
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(notebook_id)
+        print(f"WebSocket disconnected for notebook_id: {notebook_id}")
+
 
 @router.post("/chat/{notebook_id}")
 async def chat_with_data(

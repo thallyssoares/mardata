@@ -1,6 +1,6 @@
 
 import uuid
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, BackgroundTasks
 from supabase import Client
 
 from ..services.data_processing import clean_data
@@ -12,24 +12,40 @@ from ..models.user import User
 
 router = APIRouter()
 
+async def run_ai_analysis_and_save(
+    notebook_id: str,
+    business_problem: str,
+    analysis_json: str,
+    supabase: Client
+):
+    """Background task to run AI analysis and save results."""
+    # Step 2: Get initial AI insight
+    ai_insight = await get_ai_insights(analysis_json, business_problem, notebook_id)
+
+    # Step 5: Store the initial conversation messages
+    messages_to_insert = [
+        {"notebook_id": notebook_id, "role": "user", "content": business_problem},
+        {"notebook_id": notebook_id, "role": "assistant", "content": ai_insight}
+    ]
+    supabase.table("messages").insert(messages_to_insert).execute()
+
+
 @router.post("/upload/")
 async def upload_file(
+    background_tasks: BackgroundTasks,
     business_problem: str = Form(...),
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
     supabase: Client = Depends(get_supabase_client)
 ):
     """
-    Receives a file and a business problem, creates a complete notebook
-    in the database, and returns the initial analysis.
+    Receives a file and a business problem, creates a notebook, 
+    and starts the analysis in the background.
     """
     try:
         # Step 1: Clean & Analyze data
         cleaned_df = clean_data(file)
         analysis_json = generate_descriptive_analysis(cleaned_df)
-
-        # Step 2: Get initial AI insight
-        ai_insight = get_ai_insights(analysis_json, business_problem)
 
         # Step 3: Create a new notebook in the database
         notebook_data = {
@@ -41,9 +57,7 @@ async def upload_file(
         new_notebook = notebook_response.data[0]
         notebook_id = new_notebook['id']
 
-        # Step 4: (Placeholder) Create a file record in the database
-        # In a real scenario, you would upload the file to Supabase Storage first
-        # and get the storage_path.
+        # Step 4: (Placeholder) Create a file record
         file_data = {
             "notebook_id": notebook_id,
             "user_id": str(current_user.id),
@@ -54,23 +68,23 @@ async def upload_file(
         }
         supabase.table("files").insert(file_data).execute()
 
-        # Step 5: Store the initial conversation messages
-        messages_to_insert = [
-            {"notebook_id": notebook_id, "role": "user", "content": business_problem},
-            {"notebook_id": notebook_id, "role": "assistant", "content": ai_insight}
-        ]
-        supabase.table("messages").insert(messages_to_insert).execute()
+        # Add the AI analysis to background tasks
+        background_tasks.add_task(
+            run_ai_analysis_and_save,
+            notebook_id, 
+            business_problem, 
+            analysis_json, 
+            supabase
+        )
 
-        # Step 6: Return the response
+        # Step 6: Return the immediate response
         return {
             "notebook_id": notebook_id,
             "filename": file.filename,
-            "message": "File processed and notebook created successfully.",
-            "ai_insight": ai_insight
+            "message": "File uploaded. Analysis has started and will be streamed.",
         }
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        # Catch potential Supabase errors
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
