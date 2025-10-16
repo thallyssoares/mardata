@@ -8,18 +8,19 @@ load_dotenv()
 
 # Get Supabase credentials from environment variables
 supabase_url: str = os.environ.get("SUPABASE_URL")
-supabase_key: str = os.environ.get("SUPABASE_ANON_KEY")
+# Use the service role key for backend operations
+supabase_key: str = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 
 # Check if the credentials are set
 if not supabase_url or not supabase_key:
-    raise ValueError("Supabase URL and Key must be set in the environment variables.")
+    raise ValueError("Supabase URL and Service Role Key must be set in the environment variables.")
 
 # Initialize the Supabase client
 supabase: Client = create_client(supabase_url, supabase_key)
 
 def get_supabase_client() -> Client:
     """
-    Returns the initialized Supabase client.
+    Returns the initialized Supabase client (with service role privileges).
 
     Returns:
         Client: The Supabase client instance.

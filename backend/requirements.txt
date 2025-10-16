@@ -2,5 +2,5 @@ fastapi
 uvicorn[standard]
 pandas
 python-multipart
-supabase
+supabase>=2.0.0,<3.0.0
 python-dotenv

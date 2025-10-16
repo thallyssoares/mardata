@@ -10,10 +10,14 @@ const apiClient = axios.create({
 
 // Add a request interceptor to include the auth token
 apiClient.interceptors.request.use(async (config) => {
+  console.log('API Client Interceptor: Getting session...');
   const { data: { session } } = await supabase.auth.getSession();
 
   if (session?.access_token) {
+    console.log('API Client Interceptor: Session found, token starts with:', session.access_token.substring(0, 20));
     config.headers.Authorization = `Bearer ${session.access_token}`;
+  } else {
+    console.log('API Client Interceptor: No session found.');
   }
 
   return config;

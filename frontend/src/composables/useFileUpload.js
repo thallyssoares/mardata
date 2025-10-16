@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import apiClient from '@/lib/apiClient' // Use the configured axios client
 
 export function useFileUpload() {
   const selectedFiles = ref([])
@@ -27,22 +28,26 @@ export function useFileUpload() {
       formData.append('file', selectedFiles.value[0])
       formData.append('business_problem', businessProblem)
 
-      const response = await fetch('http://localhost:8000/api/upload/', {
-        method: 'POST',
-        body: formData,
+      // Use apiClient to ensure the auth interceptor is used
+      const response = await apiClient.post('/upload/', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          uploadProgress.value = Math.round(
+            (progressEvent.loaded * 100) / (progressEvent.total || 1)
+          )
+        },
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.detail || 'File upload failed')
-      }
-
-      const result = await response.json()
-      uploadProgress.value = 100
+      // Axios puts the result in the `data` property
+      const result = response.data
       return result
     } catch (error) {
-      console.error('Upload error:', error)
-      throw error
+      // Improved error handling for Axios
+      const message = error.response?.data?.detail || error.message || 'File upload failed'
+      console.error('Upload error:', message)
+      throw new Error(message)
     } finally {
       isUploading.value = false
     }
