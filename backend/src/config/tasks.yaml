@@ -1,0 +1,35 @@
+orchestration_task:
+  description: |
+    Analyze the user's request and the statistical summary of their data to create a step-by-step action plan.
+    The user's request is: {user_prompt}
+    The statistical summary is:
+    {statistical_summary}
+
+    Your final output must be a clear, numbered list of tasks for your team.
+  expected_output: 'A numbered list of analysis steps.'
+  agent: orchestrator
+
+data_validation_task:
+  description: |
+    Based on the plan from the orchestrator, execute the necessary Pandas code to validate the primary hypothesis.
+    For example, if the hypothesis is that a drop in conversions is linked to a specific campaign's CPC increase,
+    write the code to verify this.
+  expected_output: 'A JSON object confirming the hypothesis and providing the relevant data, like: `{"hypothesis_confirmed": true, "campaign": "Campaign_X", "cpc_variation": "+50%", "conversion_variation": "-35%"}`.'
+  agent: data_analyst
+  context: [orchestration_task]
+
+contextualization_task:
+  description: |
+    Based on the validated data from the data analyst, provide market context.
+    For example, if a CPC increased by 50%, is that normal for the e-commerce sector?
+  expected_output: 'A concise text providing the market context.'
+  agent: market_context_specialist
+  context: [data_validation_task]
+
+synthesis_task:
+  description: |
+    Synthesize the findings from the data analysis and the market context into a final report for the user.
+    The report should be clear, actionable, and written in business language.
+  expected_output: 'A final report in Markdown format.'
+  agent: synthesis_agent
+  context: [data_validation_task, contextualization_task]
