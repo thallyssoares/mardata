@@ -1,24 +1,28 @@
 import os
 from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
+from .model_rotator import GroqModelRotator
 
 load_dotenv()
 
-# Configure LLMs from OpenRouter
-llm_llama_70b = ChatOpenAI(
-    model="openrouter/meta-llama/llama-3.3-70b-instruct:free",
-    base_url="https://openrouter.ai/api/v1",
-    api_key=os.getenv("OPENROUTER_API_KEY")
-)
+# A list of general-purpose Groq models to rotate through
+general_purpose_models = [
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant",
+    "gpt-oss-120b",
+]
 
-llm_qwen_coder = ChatOpenAI(
-    model="openrouter/qwen/qwen-2.5-coder-32b-instruct:free",
-    base_url="https://openrouter.ai/api/v1",
-    api_key=os.getenv("OPENROUTER_API_KEY")
-)
+# A list of models suitable for coding tasks
+coding_models = [
+    "llama-3.3-70b-versatile",
+    "gpt-oss-120b",
+    "gpt-oss-20b",
+]
 
-llm_gemini_flash = ChatOpenAI(
-    model="openrouter/deepseek/deepseek-r1-distill-llama-70b:free",
-    base_url="https://openrouter.ai/api/v1",
-    api_key=os.getenv("OPENROUTER_API_KEY")
-)
+# Rotator for the Orchestrator and Synthesis agents
+llm_llama_70b = GroqModelRotator(models=general_purpose_models, temperature=0.7)
+
+# Rotator for the Data Analysis agent
+llm_qwen_coder = GroqModelRotator(models=coding_models, temperature=0.5)
+
+# Rotator for the RAG agent
+llm_gemini_flash = GroqModelRotator(models=general_purpose_models, temperature=0.7)

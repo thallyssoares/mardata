@@ -1,12 +1,12 @@
-from . import crew_service
+from . import single_agent_service
 from ..lib.llm_models import llm_llama_70b
 
 async def get_ai_insights(statistical_summary: str, business_problem: str, notebook_id: str) -> str:
     """
-    Uses the CrewAI agentic workflow to derive insights from statistical data.
+    Uses a single-agent workflow to derive insights from statistical data.
     """
-    ai_insights = await crew_service.run_analysis(
-        user_prompt=business_problem,
+    ai_insights = await single_agent_service.run_single_agent_analysis(
+        business_problem=business_problem,
         statistical_summary=statistical_summary,
         notebook_id=notebook_id
     )

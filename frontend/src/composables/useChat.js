@@ -23,7 +23,7 @@ export function useChat() {
       socket.close();
     }
 
-    const wsUrl = `${VITE_API_WEBSOCKET_URL}/ws/chat/${notebookId}`;
+    const wsUrl = `${VITE_API_WEBSOCKET_URL}/api/ws/chat/${notebookId}`;
     socket = new WebSocket(wsUrl);
 
     socket.onopen = () => {
@@ -31,18 +31,24 @@ export function useChat() {
     };
 
     socket.onmessage = (event) => {
+      console.log("WebSocket message received:", event.data);
       const data = JSON.parse(event.data);
 
-      // Remove the last progress message
-      if (messages.value.length > 0 && messages.value[messages.value.length - 1].type === 'progress') {
+      const lastMessage = messages.value.length > 0 ? messages.value[messages.value.length - 1] : null;
+
+      // If the last message was a progress message, remove it.
+      if (lastMessage && lastMessage.type === 'progress') {
         messages.value.pop();
       }
 
       if (data.type === 'progress') {
-        addMessage('System', `Agent [${data.agent}]: ${data.status}...`, 'progress');
+        addMessage('System', `Agente [${data.agent}]: ${data.status}...`, 'progress');
       } else if (data.type === 'complete') {
         addMessage('AI', data.final_insight, 'text');
         isLoading.value = false; // Analysis is done
+      } else if (data.type === 'error') {
+        addMessage('System', `Erro na análise: ${data.message}`, 'text');
+        isLoading.value = false;
       }
     };
 
