@@ -1,6 +1,8 @@
 fastapi
 uvicorn[standard]
 pandas
+numpy
+pyarrow
 python-multipart
 supabase>=2.0.0,<3.0.0
 python-dotenv

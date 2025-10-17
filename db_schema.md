@@ -54,6 +54,7 @@ Representa uma sessão de análise ou um chat individual.
 | `user_id` | `UUID` (FK) | **Referencia `users(id)`**. O dono do notebook. |
 | `title` | `TEXT` | Título do notebook, definido pelo usuário ou gerado automaticamente. |
 | `analysis_cache` | `JSONB` | Cache do resultado da análise inicial (saída de `generate_descriptive_analysis`). Otimiza o desempenho do chat. |
+| `optimized_file_path` | `TEXT` | Caminho para o arquivo de dados otimizado (Parquet) no Supabase Storage. Pode ser nulo. |
 | `created_at`| `TIMESTAMPTZ` | Data de criação. |
 | `updated_at`| `TIMESTAMPTZ` | Data da última atualização. |
 
