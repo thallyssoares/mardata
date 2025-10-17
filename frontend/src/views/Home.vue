@@ -103,6 +103,6 @@ function handleCreateNotebook() {
 }
 
 function openNotebook(id) {
-  router.push('/chat')
+  router.push(`/chat/${id}`)
 }
 </script>

@@ -7,6 +7,7 @@
         :class="['hidden lg:flex']"
         :uploaded-files="uploadedFiles"
         @files-uploaded="handleFilesUploaded"
+        :disabled="!!notebookId" 
       />
 
       <div class="flex-1 flex flex-col bg-white overflow-hidden">
@@ -14,21 +15,24 @@
           <div class="flex items-center justify-between flex-wrap gap-3">
             <div>
               <h1 class="text-xl sm:text-2xl font-bold text-ocean-800">
-                Análise de Dados
+                {{ notebookTitle }}
               </h1>
-              <p class="text-xs sm:text-sm text-foam-600 mt-1">
-                Converse com seus dados e extraia insights valiosos
+              <p v-if="!notebookId" class="text-xs sm:text-sm text-foam-600 mt-1">
+                Faça o upload de um arquivo para iniciar uma nova análise.
               </p>
             </div>
             <div v-if="notebookId" class="flex items-center space-x-2 px-3 py-2 bg-ocean-50 rounded-lg">
-              <div class="w-2 h-2 bg-ocean-500 rounded-full animate-pulse"></div>
+              <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
               <span class="text-xs sm:text-sm font-medium text-ocean-700">Notebook Ativo</span>
             </div>
           </div>
         </div>
 
         <div class="flex-1 overflow-y-auto">
-          <ChatMessages :messages="messages" />
+          <div v-if="isHistoryLoading" class="flex items-center justify-center h-full">
+            <p class="text-ocean-700">Carregando histórico do notebook...</p>
+          </div>
+          <ChatMessages v-else :messages="messages" />
         </div>
         
         <ChatInput
@@ -42,38 +46,57 @@
 </template>
 
 <script setup>
-import { ref, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import AppHeader from '@/components/AppHeader.vue';
 import ChatSidebar from '@/components/ChatSidebar.vue';
 import ChatMessages from '@/components/ChatMessages.vue';
 import ChatInput from '@/components/ChatInput.vue';
 import { useChat } from '@/composables/useChat';
 
-const { messages, isLoading, sendMessage, addMessage, connectWebSocket, disconnectWebSocket } = useChat();
+const route = useRoute();
+const router = useRouter();
 
-const uploadedFiles = ref([]);
+const {
+  messages,
+  notebookTitle,
+  uploadedFiles,
+  isLoading,
+  isHistoryLoading,
+  sendMessage,
+  addMessage,
+  clearMessages,
+  connectWebSocket,
+  disconnectWebSocket,
+  loadNotebook
+} = useChat();
+
 const notebookId = ref(null);
 
-// Initialize with a welcome message
-addMessage('AI', 'Olá! Faça upload dos seus dados para começar a análise.');
+const setupNewChat = () => {
+  clearMessages();
+  notebookId.value = null;
+  addMessage('assistant', 'Olá! Para começar, por favor, descreva seu problema de negócio e faça o upload de um arquivo de dados na barra lateral.');
+}
+
+watch(() => route.params.id, (newId) => {
+  if (newId) {
+    notebookId.value = newId;
+    loadNotebook(newId);
+  } else {
+    setupNewChat();
+  }
+}, { immediate: true });
 
 async function handleFilesUploaded(data) {
-  uploadedFiles.value = data.files;
-  notebookId.value = data.notebook_id;
-
-  // Connect to WebSocket
-  connectWebSocket(data.notebook_id);
-
-  addMessage(
-    'System',
-    `Upload concluído. Iniciando análise para: ${data.files.map(f => f.name).join(', ')}`
-  );
-  addMessage('AI', 'Estou analisando os dados... Isso pode levar um momento.', 'progress');
+  // The upload service now creates the notebook and we get back the ID.
+  // We just need to navigate to the new notebook's chat page.
+  router.push(`/chat/${data.notebook_id}`);
 }
 
 async function handleSendMessage(userMessageText) {
   if (!notebookId.value) {
-    addMessage('System', 'Por favor, faça o upload de um arquivo antes de conversar.');
+    addMessage('system', 'Por favor, inicie uma nova análise fazendo o upload de um arquivo.');
     return;
   }
   await sendMessage(userMessageText, notebookId.value);

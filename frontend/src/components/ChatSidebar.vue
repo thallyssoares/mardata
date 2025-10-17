@@ -19,7 +19,7 @@
         <div class="space-y-2">
           <div
             v-for="file in uploadedFiles"
-            :key="file.name"
+            :key="file.id"
             class="flex items-center p-3 rounded-lg bg-ocean-50 border border-ocean-100"
           >
             <svg
@@ -37,7 +37,7 @@
             </svg>
             <div class="flex-1 min-w-0">
               <p class="text-sm font-medium text-ocean-800 truncate">
-                {{ file.name }}
+                {{ file.file_name }}
               </p>
             </div>
             <span class="ml-2 px-2 py-1 text-xs font-medium text-ocean-700 bg-ocean-100 rounded">

@@ -1,7 +1,7 @@
 """API routes for notebooks."""
 from fastapi import APIRouter, Depends, HTTPException, status
 from supabase import Client
-from typing import List
+from typing import List, Optional
 
 from ..models.user import User
 from ..lib.dependencies import get_current_user
@@ -21,6 +21,23 @@ class Notebook(BaseModel):
     class Config:
         from_attributes = True # Allows Pydantic to read data from ORM models
 
+class File(BaseModel):
+    id: UUID4
+    file_name: str
+    file_type: Optional[str] = None
+    file_size_bytes: Optional[int] = None
+    storage_path: str
+
+class Message(BaseModel):
+    id: int
+    role: str
+    content: str
+    created_at: datetime
+
+class NotebookDetails(Notebook):
+    messages: List[Message] = []
+    files: List[File] = []
+
 router = APIRouter()
 
 @router.get("/", response_model=List[Notebook])
@@ -37,6 +54,30 @@ async def get_user_notebooks(
         return notebooks_data
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{notebook_id}", response_model=NotebookDetails)
+async def get_notebook_details(
+    notebook_id: UUID4,
+    current_user: User = Depends(get_current_user),
+    supabase: Client = Depends(get_supabase_client)
+):
+    """
+    Retrieves all details for a specific notebook, including messages and files.
+    RLS policies ensure the user can only access their own notebooks.
+    """
+    try:
+        # Fetch the notebook and its related messages and files in one go
+        response = supabase.table("notebooks").select("*, messages(*), files(*)").eq("id", str(notebook_id)).single().execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Notebook not found.")
+
+        return response.data
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
 
 @router.delete("/{notebook_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_notebook(
