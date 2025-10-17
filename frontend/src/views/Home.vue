@@ -75,6 +75,7 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNotebooks } from '@/composables/useNotebooks'
 import AppHeader from '@/components/AppHeader.vue'
@@ -83,7 +84,11 @@ import EmptyState from '@/components/EmptyState.vue'
 import { Button } from '@/components/ui/button'
 
 const router = useRouter()
-const { notebooks } = useNotebooks()
+const { notebooks, fetchNotebooks } = useNotebooks()
+
+onMounted(() => {
+  fetchNotebooks();
+});
 
 function handleCreateNotebook() {
   router.push('/chat')
