@@ -1,5 +1,5 @@
 <template>
-  <div ref="chatContainer" class="flex-1 p-6 overflow-y-auto bg-foam-50 wave-pattern">
+  <div ref="chatContainer" class="p-6 bg-foam-50 wave-pattern">
     <div v-if="messages.length === 0" class="flex items-center justify-center h-full">
       <div class="text-center">
         <div class="w-24 h-24 ocean-gradient-subtle rounded-full flex items-center justify-center mx-auto mb-4">

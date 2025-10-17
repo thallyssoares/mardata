@@ -21,7 +21,10 @@
       <div :class="['flex flex-col', isUser ? 'items-end' : 'items-start']">
         <Card :class="bubbleClasses">
           <CardContent class="p-3">
-            <p class="text-sm whitespace-pre-wrap leading-relaxed">
+            <div v-if="message.sender === 'AI'">
+              <MarkdownRenderer :markdown="message.text" />
+            </div>
+            <p v-else class="text-sm whitespace-pre-wrap leading-relaxed">
               {{ message.text }}
             </p>
           </CardContent>
@@ -38,6 +41,7 @@
 import { computed } from 'vue'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import MarkdownRenderer from './MarkdownRenderer.vue'
 
 const props = defineProps({
   message: {

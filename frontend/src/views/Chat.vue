@@ -9,7 +9,7 @@
         @files-uploaded="handleFilesUploaded"
       />
 
-      <div class="flex-1 flex flex-col bg-white">
+      <div class="flex-1 flex flex-col bg-white overflow-hidden">
         <div class="px-4 sm:px-6 py-4 border-b border-ocean-100 bg-white">
           <div class="flex items-center justify-between flex-wrap gap-3">
             <div>
@@ -27,7 +27,10 @@
           </div>
         </div>
 
-        <ChatMessages :messages="messages" />
+        <div class="flex-1 overflow-y-auto">
+          <ChatMessages :messages="messages" />
+        </div>
+        
         <ChatInput
           :is-loading="isLoading"
           :session-id="notebookId" 

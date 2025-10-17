@@ -26,8 +26,8 @@ def get_follow_up_insight(original_analysis: str, chat_history: list, new_questi
     history_str = "\n".join(history_lines)
 
     prompt = f"""
-    Você é um assistente de análise de dados. Sua única tarefa é responder a perguntas de acompanhamento com base estritamente no contexto fornecido.
-    Responda em Português do Brasil.
+    Você é um assistente de análise de dados especialista. Sua tarefa é responder a perguntas de acompanhamento com base no contexto fornecido.
+    Seja direto e conciso. Responda em Português do Brasil.
 
     **Contexto da Análise Original:**
     {original_analysis}
@@ -38,7 +38,9 @@ def get_follow_up_insight(original_analysis: str, chat_history: list, new_questi
     **Nova Pergunta do Usuário:**
     "{new_question}"
 
-    Baseado SOMENTE no contexto e no histórico, responda à nova pergunta.
+    **Instruções:**
+    1. Responda a pergunta do usuário usando **estritamente** as informações do contexto e do histórico.
+    2. Se a informação não estiver disponível, **não diga apenas 'não sei'**. Em vez disso, posicione-se como um especialista e explique **exatamente qual análise adicional seria necessária** para obter a resposta.
     """
 
     response = llm_llama_70b.invoke(prompt)
