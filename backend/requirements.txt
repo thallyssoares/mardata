@@ -4,8 +4,6 @@ pandas
 python-multipart
 supabase>=2.0.0,<3.0.0
 python-dotenv
-crewai[tools]
 langchain-groq
 gotrue
-PyYAML
 groq

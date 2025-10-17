@@ -42,11 +42,7 @@
               @keydown.enter="handleLogin"
             />
           </div>
-          <div class="flex items-center justify-between text-sm">
-            <a href="#" class="text-ocean-600 hover:text-ocean-700 hover:underline">
-              Esqueceu a senha?
-            </a>
-          </div>
+
           <Button
             @click="handleLogin"
             :disabled="isLoading"

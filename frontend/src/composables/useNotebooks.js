@@ -27,29 +27,9 @@ export function useNotebooks() {
     }
   };
 
-  const createNotebook = (title, description) => {
-    // This would now be a POST request to the backend
-    const newNotebook = {
-      id: Date.now().toString(),
-      title,
-      description,
-      created_at: new Date().toISOString(),
-      filesCount: 0,
-      lastInsight: 'Aguardando upload de dados',
-    }
-    notebooks.value.unshift(newNotebook)
-    return newNotebook
-  }
-
-  const getNotebook = (id) => {
-    return notebooks.value.find(n => n.id === id)
-  }
-
   return {
     notebooks,
     fetchNotebooks,
     deleteNotebook,
-    createNotebook,
-    getNotebook,
   }
 }

@@ -11,18 +11,5 @@ general_purpose_models = [
     "gpt-oss-120b",
 ]
 
-# A list of models suitable for coding tasks
-coding_models = [
-    "llama-3.3-70b-versatile",
-    "gpt-oss-120b",
-    "gpt-oss-20b",
-]
-
 # Rotator for the Orchestrator and Synthesis agents
 llm_llama_70b = GroqModelRotator(models=general_purpose_models, temperature=0.7)
-
-# Rotator for the Data Analysis agent
-llm_qwen_coder = GroqModelRotator(models=coding_models, temperature=0.5)
-
-# Rotator for the RAG agent
-llm_gemini_flash = GroqModelRotator(models=general_purpose_models, temperature=0.7)
