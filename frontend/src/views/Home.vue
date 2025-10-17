@@ -39,6 +39,7 @@
           :key="notebook.id"
           :notebook="notebook"
           @click="openNotebook(notebook.id)"
+          @delete="handleDelete"
         />
       </div>
 
@@ -84,11 +85,18 @@ import EmptyState from '@/components/EmptyState.vue'
 import { Button } from '@/components/ui/button'
 
 const router = useRouter()
-const { notebooks, fetchNotebooks } = useNotebooks()
+const { notebooks, fetchNotebooks, deleteNotebook } = useNotebooks()
 
 onMounted(() => {
   fetchNotebooks();
 });
+
+async function handleDelete(notebookId) {
+  if (window.confirm('Tem certeza que deseja excluir este notebook? Esta ação não pode ser desfeita.')) {
+    await deleteNotebook(notebookId);
+    // The notebook is already removed from the reactive `notebooks` array in the composable
+  }
+}
 
 function handleCreateNotebook() {
   router.push('/chat')
