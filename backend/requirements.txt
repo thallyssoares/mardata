@@ -9,3 +9,5 @@ python-dotenv
 langchain-groq
 gotrue
 groq
+redis
+arq

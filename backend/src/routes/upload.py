@@ -64,43 +64,58 @@ async def upload_file(
         with open(temp_path, "wb") as f:
             f.write(file.file.read())
 
-        # Step 1: Analyze data using the chunk-based processor
-        analysis_json = process_spreadsheet_in_chunks(temp_path, file.filename)
+        # Step 1: Analyze data and get the analysis summary
+        analysis_summary = process_spreadsheet_in_chunks(temp_path, file.filename)
 
-        # Step 2: Create a new notebook in the database
+        # Step 2: Construct the data schema from the analysis summary
+        data_schema = {}
+        if 'all_columns' in analysis_summary and 'numerical_cols' in analysis_summary and 'categorical_cols' in analysis_summary:
+            for col in analysis_summary['all_columns']:
+                if col in analysis_summary['numerical_cols']:
+                    data_schema[col] = 'numerical'
+                elif col in analysis_summary['categorical_cols']:
+                    data_schema[col] = 'categorical'
+                else:
+                    data_schema[col] = 'unknown'
+
+        # Step 3: Define storage path and create the notebook record with all required fields
+        storage_path = f"uploads/{current_user.id}/{uuid.uuid4()}/{file.filename}"
+        
         notebook_data = {
             "user_id": str(current_user.id),
-            "title": business_problem[:100],  # Use the problem as a title
-            "analysis_cache": analysis_json
+            "title": business_problem[:100],
+            "analysis_cache": analysis_summary,
+            "original_file_path": storage_path, # Add this field
+            "data_schema": data_schema          # Add this field
         }
         notebook_response = supabase.table("notebooks").insert(notebook_data).execute()
         new_notebook = notebook_response.data[0]
         notebook_id = new_notebook['id']
 
-        # Step 3: Create a file record
+        # Step 4: Create a file record
         file_data = {
             "notebook_id": notebook_id,
             "user_id": str(current_user.id),
-            "storage_path": f"uploads/{current_user.id}/{notebook_id}/{file.filename}",
+            "storage_path": storage_path,
             "file_name": file.filename,
             "file_type": file.content_type,
             "file_size_bytes": file.size
         }
         supabase.table("files").insert(file_data).execute()
 
-        # Step 4: Add the AI analysis and Parquet conversion to background tasks
+        # Step 5: Add the AI analysis and Parquet conversion to background tasks
         background_tasks.add_task(
             run_ai_analysis_and_save,
             notebook_id=notebook_id, 
             business_problem=business_problem, 
-            analysis_json=analysis_json, 
+            analysis_json=analysis_summary, 
             supabase=supabase,
             temp_path=temp_path,
             original_file_name=file.filename,
             user_id=str(current_user.id)
         )
 
-        # Step 5: Return the immediate response
+        # Step 6: Return the immediate response
         return {
             "notebook_id": notebook_id,
             "filename": file.filename,

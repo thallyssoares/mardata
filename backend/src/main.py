@@ -2,12 +2,23 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .routes import upload, chat, auth, notebooks
+from .lib.redis_client import get_redis_pool, close_redis_pool
 
 app = FastAPI(
     title="MarData API",
     description="API for the MarData platform, providing data analysis as a service.",
     version="0.1.0",
 )
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize Redis pool on startup."""
+    await get_redis_pool()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Close Redis pool on shutdown."""
+    await close_redis_pool()
 
 # Set up CORS middleware
 app.add_middleware(

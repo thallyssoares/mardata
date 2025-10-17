@@ -111,16 +111,19 @@ export function useChat() {
     isLoading.value = true
 
     try {
-      const response = await apiClient.post(`/chat/${notebookId}`, { question: text })
-      const result = response.data
-      addMessage('assistant', result.answer)
+      // The backend will now process the request asynchronously.
+      // The response will be streamed via WebSocket.
+      await apiClient.post(`/chat/${notebookId}`, { question: text })
+      // We don't add the assistant message here anymore.
+      // The WebSocket 'onmessage' handler will do it.
     } catch (error) {
       console.error('Error sending message:', error)
       const errorMessage = error.response?.data?.detail || error.message
       addMessage('system', `Error: ${errorMessage}`)
-    } finally {
-      isLoading.value = false
-    }
+      isLoading.value = false // Stop loading on API error
+    } 
+    // We no longer set isLoading to false here.
+    // It will be set to false by the WebSocket onmessage handler when the first token arrives.
   }
 
   const clearMessages = () => {
