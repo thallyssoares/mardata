@@ -2,6 +2,7 @@
 import uuid
 import tempfile
 import os
+import logging
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, BackgroundTasks
 from supabase import Client
 
@@ -13,6 +14,10 @@ from ..lib.supabase_client import get_supabase_client
 from ..models.user import User
 
 router = APIRouter()
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 async def run_ai_analysis_and_save(
     notebook_id: str,
@@ -66,10 +71,14 @@ async def upload_file(
 
         # Step 1: Analyze data and get the analysis summary
         analysis_summary = process_spreadsheet_in_chunks(temp_path, file.filename)
+        logger.info(f"Analysis Summary Type: {type(analysis_summary)}")
+        if isinstance(analysis_summary, dict):
+            logger.info(f"Analysis Summary Keys: {analysis_summary.keys()}")
 
         # Step 2: Construct the data schema from the analysis summary
         data_schema = {}
-        if 'all_columns' in analysis_summary and 'numerical_cols' in analysis_summary and 'categorical_cols' in analysis_summary:
+        if isinstance(analysis_summary, dict) and 'all_columns' in analysis_summary and 'numerical_cols' in analysis_summary and 'categorical_cols' in analysis_summary:
+            logger.info("Constructing data_schema from analysis_summary.")
             for col in analysis_summary['all_columns']:
                 if col in analysis_summary['numerical_cols']:
                     data_schema[col] = 'numerical'
@@ -77,6 +86,8 @@ async def upload_file(
                     data_schema[col] = 'categorical'
                 else:
                     data_schema[col] = 'unknown'
+        else:
+            logger.warning("Could not construct data_schema: analysis_summary is missing required keys.")
 
         # Step 3: Define storage path and create the notebook record with all required fields
         storage_path = f"uploads/{current_user.id}/{uuid.uuid4()}/{file.filename}"
@@ -88,6 +99,7 @@ async def upload_file(
             "original_file_path": storage_path, # Add this field
             "data_schema": data_schema          # Add this field
         }
+        logger.info(f"Attempting to insert notebook with data_schema: {data_schema}")
         notebook_response = supabase.table("notebooks").insert(notebook_data).execute()
         new_notebook = notebook_response.data[0]
         notebook_id = new_notebook['id']
@@ -108,7 +120,7 @@ async def upload_file(
             run_ai_analysis_and_save,
             notebook_id=notebook_id, 
             business_problem=business_problem, 
-            analysis_json=analysis_summary, 
+            analysis_json=analysis_summary, # Note: it's a dict, not json
             supabase=supabase,
             temp_path=temp_path,
             original_file_name=file.filename,

@@ -16,9 +16,15 @@ def generate_descriptive_analysis(df: pd.DataFrame) -> Dict[str, Any]:
     """
     analysis_output = {}
 
+    # Get column types
+    numerical_cols = df.select_dtypes(include=['number']).columns.tolist()
+    categorical_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+
     # Add direct, reliable information about the DataFrame
     analysis_output['total_records'] = len(df)
     analysis_output['all_columns'] = df.columns.tolist()
+    analysis_output['numerical_cols'] = numerical_cols
+    analysis_output['categorical_cols'] = categorical_cols
 
     # 1. Basic Info (dtypes, non-null counts)
     # Using a string buffer to capture the output of df.info()
@@ -33,14 +39,12 @@ def generate_descriptive_analysis(df: pd.DataFrame) -> Dict[str, Any]:
 
     # 3. Correlation Matrix for numerical columns
     # We only compute this if there are at least 2 numerical columns
-    numerical_cols = df.select_dtypes(include=['number']).columns
     if len(numerical_cols) > 1:
         analysis_output['correlation_matrix'] = df[numerical_cols].corr().to_dict()
     else:
         analysis_output['correlation_matrix'] = "Not enough numerical columns to compute correlation."
 
     # 4. Value counts for categorical columns
-    categorical_cols = df.select_dtypes(include=['object', 'category']).columns
     value_counts = {}
     for col in categorical_cols:
         # Limit to the top 20 most frequent values for brevity

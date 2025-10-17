@@ -121,6 +121,8 @@ def process_spreadsheet_in_chunks(file_path: str, file_name: str) -> Dict[str, A
     final_analysis = {}
     final_analysis['total_records'] = total_records
     final_analysis['all_columns'] = all_columns
+    final_analysis['numerical_cols'] = numerical_cols
+    final_analysis['categorical_cols'] = categorical_cols
     
     # Consolidate value counts
     final_value_counts = {}

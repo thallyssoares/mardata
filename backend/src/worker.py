@@ -100,7 +100,7 @@ async def process_follow_up_question(ctx, chat_context: dict, user_question: str
 
         # 2. Download file and execute code
         storage_path = chat_context["original_file_path"]
-        file_content_response = supabase.storage.from_("mardata-bucket").download(storage_path)
+        file_content_response = supabase.storage.from_("mardata-files").download(storage_path)
         file_content = file_content_response.decode('utf-8')
         df = pd.read_csv(StringIO(file_content))
         
