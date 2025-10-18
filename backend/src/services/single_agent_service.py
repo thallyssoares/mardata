@@ -3,30 +3,15 @@ from typing import Dict, Any
 
 from ..lib.llm_models import llm_llama_70b
 from . import rag_service
-from ..lib.websocket_manager import manager
 
 async def run_single_agent_analysis(business_problem: str, statistical_summary: str, notebook_id: str) -> str:
     """
-    Performs data analysis using a single, well-prompted AI agent and streams the results.
+    Performs data analysis using a single, well-prompted AI agent.
     """
-    # --- 1. Send initial progress updates ---
-    await manager.send_json(notebook_id, {
-        "type": "progress",
-        "agent": "Expert Data Analyst",
-        "status": "Análise iniciada. Interpretando o problema de negócio...",
-    })
-    await asyncio.sleep(1)
-
-    # --- 2. Retrieve RAG context ---
-    await manager.send_json(notebook_id, {
-        "type": "progress",
-        "agent": "Expert Data Analyst",
-        "status": "Consultando base de conhecimento para contexto de mercado...",
-    })
+    # --- 1. Retrieve RAG context ---
     knowledge_context = rag_service.retrieve_knowledge(business_problem)
-    await asyncio.sleep(1.5)
 
-    # --- 3. Construct the master prompt ---
+    # --- 2. Construct the master prompt ---
     prompt = f"""
     **Você é um Analista de Dados e Estrategista de Negócios sênior, e se comunica como um consultor de elite: direto, perspicaz e focado em gerar valor.**
 
@@ -72,37 +57,9 @@ async def run_single_agent_analysis(business_problem: str, statistical_summary: 
 
     **RELATÓRIO EXECUTIVO DE ANÁLISE E ESTRATÉGIA (Formato Markdown, em texto corrido):**
     """
-    await manager.send_json(notebook_id, {
-        "type": "progress",
-        "agent": "Expert Data Analyst",
-        "status": "Todos os dados foram analisados. Gerando o relatório final...",
-    })
-    await asyncio.sleep(1)
 
-    # --- 4. Invoke LLM and stream the response ---
-    response_stream = llm_llama_70b.astream(prompt)
-    final_report = ""
-    
-    # Send the first token to create the message bubble on the frontend
-    first_chunk = await anext(response_stream)
-    if first_chunk:
-        final_report += first_chunk.content
-        await manager.send_json(notebook_id, {
-            "type": "token",
-            "content": first_chunk.content
-        })
-
-    # Stream remaining tokens
-    async for chunk in response_stream:
-        token = chunk.content
-        if token:
-            final_report += token
-            await manager.send_json(notebook_id, {
-                "type": "token",
-                "content": token
-            })
-    
-    # --- 5. Send stream end message ---
-    await manager.send_json(notebook_id, {"type": "stream_end"})
+    # --- 3. Invoke LLM ---
+    response = llm_llama_70b.invoke(prompt)
+    final_report = response.content
 
     return final_report

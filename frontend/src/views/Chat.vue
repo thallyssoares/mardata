@@ -42,33 +42,68 @@
 </template>
 
 <script setup>
-import { ref, onUnmounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import apiClient from '@/lib/apiClient';
 import AppHeader from '@/components/AppHeader.vue';
 import ChatSidebar from '@/components/ChatSidebar.vue';
 import ChatMessages from '@/components/ChatMessages.vue';
 import ChatInput from '@/components/ChatInput.vue';
 import { useChat } from '@/composables/useChat';
 
-const { messages, isLoading, sendMessage, addMessage, connectWebSocket, disconnectWebSocket } = useChat();
+const route = useRoute();
+const router = useRouter();
+const { messages, isLoading, sendMessage, addMessage, setMessages } = useChat();
 
 const uploadedFiles = ref([]);
-const notebookId = ref(null);
+const notebookId = ref(route.query.id || null);
 
-// Initialize with a welcome message
-addMessage('AI', 'Olá! Faça upload dos seus dados para começar a análise.');
+const loadNotebook = async (id) => {
+    if (!id) {
+        setMessages([]);
+        uploadedFiles.value = [];
+        notebookId.value = null;
+        addMessage('AI', 'Olá! Faça upload dos seus dados para começar a análise.');
+        return;
+    }
+    notebookId.value = id;
+    isLoading.value = true;
+    try {
+        const response = await apiClient.get(`/notebooks/${id}`);
+        const notebookData = response.data;
+
+        const formattedMessages = notebookData.messages.map(msg => ({
+            id: msg.id,
+            sender: msg.role === 'user' ? 'User' : 'AI',
+            text: msg.content,
+            timestamp: msg.created_at,
+        }));
+        setMessages(formattedMessages);
+
+        if (notebookData.files) {
+            uploadedFiles.value = notebookData.files.map(file => ({
+                name: file.file_name,
+                size: file.file_size_bytes,
+            }));
+        }
+    } catch (error) {
+        console.error('Error fetching notebook data:', error);
+        addMessage('System', 'Erro ao carregar o notebook.');
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+onMounted(() => {
+  loadNotebook(route.query.id);
+});
+
+watch(() => route.query.id, (newId) => {
+    loadNotebook(newId);
+});
 
 async function handleFilesUploaded(data) {
-  uploadedFiles.value = data.files;
-  notebookId.value = data.notebook_id;
-
-  // Connect to WebSocket
-  connectWebSocket(data.notebook_id);
-
-  addMessage(
-    'System',
-    `Upload concluído. Iniciando análise para: ${data.files.map(f => f.name).join(', ')}`
-  );
-  addMessage('AI', 'Estou analisando os dados... Isso pode levar um momento.', 'progress');
+  router.push({ path: '/chat', query: { id: data.notebook_id } });
 }
 
 async function handleSendMessage(userMessageText) {
@@ -79,8 +114,4 @@ async function handleSendMessage(userMessageText) {
   await sendMessage(userMessageText, notebookId.value);
 }
 
-// Disconnect from WebSocket when the component is unmounted
-onUnmounted(() => {
-  disconnectWebSocket();
-});
 </script>
