@@ -49,104 +49,127 @@ async def run_ai_analysis_and_save(
     )
 
 
-@router.post("/upload/")
-async def upload_file(
-    background_tasks: BackgroundTasks,
+@router.post("/upload/presigned-url/")
+async def create_presigned_url(
     business_problem: str = Form(...),
-    file: UploadFile = File(...),
+    file_name: str = Form(...),
+    file_type: str = Form(...),
     current_user: User = Depends(get_current_user),
     supabase: Client = Depends(get_supabase_client)
 ):
     """
-    Receives a file and a business problem, creates a notebook, 
-    and starts the analysis and optimization in the background.
+    Creates a notebook, generates a presigned URL for file upload,
+    and returns the URL and notebook ID to the client.
     """
-    # Create a temporary file to store the upload
-    temp_dir = tempfile.mkdtemp()
-    temp_path = os.path.join(temp_dir, file.filename)
-
     try:
-        content = await file.read()
-        with open(temp_path, "wb") as f:
-            f.write(content)
-
-        # Step 1: Analyze data and get the analysis summary
-        analysis_summary = process_spreadsheet_in_chunks(temp_path, file.filename)
-        logger.info(f"Analysis Summary Type: {type(analysis_summary)}")
-        if isinstance(analysis_summary, dict):
-            logger.info(f"Analysis Summary Keys: {analysis_summary.keys()}")
-
-        # Step 2: Construct the data schema from the analysis summary
-        data_schema = {}
-        if isinstance(analysis_summary, dict) and 'all_columns' in analysis_summary and 'numerical_cols' in analysis_summary and 'categorical_cols' in analysis_summary:
-            logger.info("Constructing data_schema from analysis_summary.")
-            for col in analysis_summary['all_columns']:
-                if col in analysis_summary['numerical_cols']:
-                    data_schema[col] = 'numerical'
-                elif col in analysis_summary['categorical_cols']:
-                    data_schema[col] = 'categorical'
-                else:
-                    data_schema[col] = 'unknown'
-        else:
-            logger.warning("Could not construct data_schema: analysis_summary is missing required keys.")
-
-        # Step 3: Define storage path and upload the original file
-        storage_path = f"uploads/{current_user.id}/{uuid.uuid4()}/{file.filename}"
-        logger.info(f"Attempting to upload file to Supabase Storage at: {storage_path}")
-        upload_response = supabase.storage.from_("mardata-files").upload(
-            path=storage_path,
-            file=content,
-            file_options={"content-type": file.content_type}
-        )
-        logger.info(f"Supabase Storage upload response: {upload_response}")
+        # Step 1: Create a unique path for the file in storage
+        storage_path = f"uploads/{current_user.id}/{uuid.uuid4()}/{file_name}"
         
+        # Step 2: Generate a presigned URL from Supabase Storage
+        presigned_url_response = supabase.storage.from_("mardata-files").create_signed_url(
+            path=storage_path,
+            expires_in=3600,  # URL is valid for 1 hour
+        )
+        
+        # Step 3: Create the notebook record in the database
         notebook_data = {
             "user_id": str(current_user.id),
             "title": business_problem[:100],
-            "analysis_cache": analysis_summary,
-            "data_schema": data_schema
         }
-        logger.info(f"Attempting to insert notebook with data_schema: {data_schema}")
         notebook_response = supabase.table("notebooks").insert(notebook_data).execute()
         new_notebook = notebook_response.data[0]
         notebook_id = new_notebook['id']
 
-        # Step 4: Create a file record
+        # Step 4: Create the file record associated with the notebook
         file_data = {
             "notebook_id": notebook_id,
             "user_id": str(current_user.id),
             "storage_path": storage_path,
-            "file_name": file.filename,
-            "file_type": file.content_type,
-            "file_size_bytes": len(content) # Use len(content) for file size
+            "file_name": file_name,
+            "file_type": file_type,
         }
         supabase.table("files").insert(file_data).execute()
+
+        # Step 5: Return the presigned URL and notebook ID
+        return {
+            "presigned_url": presigned_url_response['signedURL'],
+            "storage_path": storage_path,
+            "notebook_id": notebook_id,
+        }
+    except Exception as e:
+        logger.error(f"Error creating presigned URL: {e}")
+        raise HTTPException(status_code=500, detail="Could not create presigned URL.")
+
+
+@router.post("/process-upload/")
+async def process_uploaded_file(
+    background_tasks: BackgroundTasks,
+    notebook_id: str = Form(...),
+    business_problem: str = Form(...),
+    file_name: str = Form(...),
+    storage_path: str = Form(...),
+    current_user: User = Depends(get_current_user),
+    supabase: Client = Depends(get_supabase_client)
+):
+    """
+    After the file is uploaded to storage, this endpoint triggers the analysis
+    and optimization in the background.
+    """
+    temp_dir = tempfile.mkdtemp()
+    temp_path = os.path.join(temp_dir, file_name)
+
+    try:
+        # Step 1: Download the file from storage to a temporary path
+        with open(temp_path, 'wb') as f:
+            res = supabase.storage.from_("mardata-files").download(storage_path)
+            f.write(res)
+
+        # Step 2: Analyze data and get the analysis summary
+        analysis_summary = process_spreadsheet_in_chunks(temp_path, file_name)
+        
+        # Step 3: Update the notebook with the analysis cache and data schema
+        data_schema = {}
+        if isinstance(analysis_summary, dict) and 'all_columns' in analysis_summary:
+            for col in analysis_summary['all_columns']:
+                if col in analysis_summary.get('numerical_cols', []):
+                    data_schema[col] = 'numerical'
+                elif col in analysis_summary.get('categorical_cols', []):
+                    data_schema[col] = 'categorical'
+                else:
+                    data_schema[col] = 'unknown'
+        
+        update_data = {
+            "analysis_cache": analysis_summary,
+            "data_schema": data_schema,
+        }
+        supabase.table("notebooks").update(update_data).eq("id", notebook_id).execute()
+        
+        # Step 4: Get file size and update the file record
+        file_size_bytes = os.path.getsize(temp_path)
+        supabase.table("files").update({"file_size_bytes": file_size_bytes}).eq("storage_path", storage_path).execute()
 
         # Step 5: Add the AI analysis and Parquet conversion to background tasks
         background_tasks.add_task(
             run_ai_analysis_and_save,
-            notebook_id=notebook_id, 
-            business_problem=business_problem, 
-            analysis_json=analysis_summary, # Note: it's a dict, not json
+            notebook_id=notebook_id,
+            business_problem=business_problem,
+            analysis_json=analysis_summary,
             supabase=supabase,
             temp_path=temp_path,
-            original_file_name=file.filename,
+            original_file_name=file_name,
             user_id=str(current_user.id)
         )
 
         # Step 6: Return the immediate response
         return {
             "notebook_id": notebook_id,
-            "filename": file.filename,
+            "filename": file_name,
             "analysis_summary": analysis_summary,
-            "message": "File uploaded. Analysis has started.",
+            "message": "File processing started.",
         }
-
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        # If something fails before the background task, clean up the temp file
+        logger.error(f"Error processing uploaded file: {e}")
         if os.path.exists(temp_path):
             os.remove(temp_path)
             os.rmdir(temp_dir)
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred during file processing.")

@@ -27,6 +27,12 @@
         </div>
 
         <div v-if="isAuthenticated" class="flex items-center space-x-4">
+          <Button @click="handleCreateNotebook" class="hidden sm:flex bg-ocean-600 hover:bg-ocean-700 text-white">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+            Novo Notebook
+          </Button>
           <Avatar @click="handleLogout" title="Clique para sair" class="cursor-pointer ring-2 ring-ocean-200 hover:ring-ocean-400 transition-all">
             <AvatarImage src="https://github.com/radix-vue.png" alt="User" />
             <AvatarFallback class="bg-ocean-gradient text-white font-semibold">
@@ -41,6 +47,7 @@
 
 <script setup>
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
 import { useAuth } from '@/composables/useAuth'
 import { useRouter } from 'vue-router'
 
@@ -50,5 +57,9 @@ const router = useRouter()
 function handleLogout() {
   logout()
   router.push('/login')
+}
+
+function handleCreateNotebook() {
+  router.push('/chat')
 }
 </script>

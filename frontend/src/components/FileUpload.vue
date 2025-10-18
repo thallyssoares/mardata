@@ -197,34 +197,51 @@ function formatFileSize(bytes) {
 
 async function uploadFiles() {
   if (selectedFiles.value.length === 0 || businessProblem.value.trim() === '') {
-    return
+    return;
   }
 
-  isUploading.value = true
-  const formData = new FormData()
-  formData.append('file', selectedFiles.value[0])
-  formData.append('business_problem', businessProblem.value)
+  isUploading.value = true;
+  const file = selectedFiles.value[0];
 
   try {
-    // Axios will automatically handle the FormData content type
-    const response = await apiClient.post('/upload/', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+    // Step 1: Get presigned URL from the backend
+    const presignedUrlFormData = new FormData();
+    presignedUrlFormData.append('business_problem', businessProblem.value);
+    presignedUrlFormData.append('file_name', file.name);
+    presignedUrlFormData.append('file_type', file.type);
+
+    const presignedUrlResponse = await apiClient.post('/upload/presigned-url/', presignedUrlFormData);
+    const { presigned_url, storage_path, notebook_id } = presignedUrlResponse.data;
+
+    // Step 2: Upload the file directly to Supabase Storage
+    await apiClient.put(presigned_url, file, {
+      headers: { 'Content-Type': file.type },
     });
 
-    const result = response.data;
+    // Step 3: Notify the backend to process the uploaded file
+    const processFormData = new FormData();
+    processFormData.append('notebook_id', notebook_id);
+    processFormData.append('business_problem', businessProblem.value);
+    processFormData.append('file_name', file.name);
+    processFormData.append('storage_path', storage_path);
+
+    const processResponse = await apiClient.post('/process-upload/', processFormData);
+
+    // Step 4: Emit success event
     emits('files-uploaded', {
       files: selectedFiles.value,
-      notebook_id: result.notebook_id, // Use the correct key from the backend
-      aiInsight: result.ai_insight,
+      notebook_id: notebook_id,
+      aiInsight: processResponse.data.ai_insight, // Or however you get this now
     });
+
+    // Reset state
     selectedFiles.value = [];
     businessProblem.value = '';
+
   } catch (error) {
-    console.error('Error uploading files:', error);
+    console.error('Error during upload process:', error);
     const errorMessage = error.response?.data?.detail || error.message;
-    alert(`Erro: ${errorMessage}`);
+    alert(`An error occurred: ${errorMessage}`);
   } finally {
     isUploading.value = false;
   }

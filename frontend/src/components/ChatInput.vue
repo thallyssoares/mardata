@@ -2,13 +2,18 @@
   <div class="p-6 border-t border-ocean-100 bg-white shadow-ocean-sm">
     <div class="max-w-4xl mx-auto">
       <div class="flex items-end space-x-3">
+        <Button @click="$emit('open-upload-modal')" variant="outline" class="h-[60px] px-4">
+          <svg class="w-6 h-6 text-ocean-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+          </svg>
+        </Button>
         <div class="flex-1 relative">
           <Textarea
             v-model="newMessage"
             placeholder="Faça uma pergunta sobre seus dados..."
             class="min-h-[60px] resize-none border-ocean-200 focus:border-ocean-500 focus:ring-ocean-500 pr-16"
             @keydown.enter.prevent="handleSendMessage"
-            :disabled="isLoading"
+            :disabled="isLoading || !sessionId"
           />
           <div class="absolute bottom-3 right-3 text-xs text-foam-500">
             {{ newMessage.length }} / 500
@@ -86,7 +91,7 @@ const props = defineProps({
   isLoading: { type: Boolean, default: false },
 })
 
-const emits = defineEmits(['send-message'])
+const emits = defineEmits(['send-message', 'open-upload-modal'])
 
 const newMessage = ref('')
 
