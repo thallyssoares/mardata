@@ -57,12 +57,14 @@ const { messages, isLoading, sendMessage, addMessage, setMessages } = useChat();
 
 const uploadedFiles = ref([]);
 const notebookId = ref(route.query.id || null);
+const statisticalSummary = ref(null); // New ref to store the statistical summary
 
 const loadNotebook = async (id) => {
     if (!id) {
         setMessages([]);
         uploadedFiles.value = [];
         notebookId.value = null;
+        statisticalSummary.value = null; // Clear summary
         addMessage('AI', 'Olá! Faça upload dos seus dados para começar a análise.');
         return;
     }
@@ -86,6 +88,8 @@ const loadNotebook = async (id) => {
                 size: file.file_size_bytes,
             }));
         }
+        statisticalSummary.value = notebookData.analysis_cache; // Store the summary
+
     } catch (error) {
         console.error('Error fetching notebook data:', error);
         addMessage('System', 'Erro ao carregar o notebook.');
@@ -103,6 +107,9 @@ watch(() => route.query.id, (newId) => {
 });
 
 async function handleFilesUploaded(data) {
+  // This function is called when a new notebook is created.
+  // The `upload.py` endpoint now returns `analysis_summary`.
+  statisticalSummary.value = data.analysis_summary; // Store the summary
   router.push({ path: '/chat', query: { id: data.notebook_id } });
 }
 
@@ -111,7 +118,8 @@ async function handleSendMessage(userMessageText) {
     addMessage('System', 'Por favor, faça o upload de um arquivo antes de conversar.');
     return;
   }
-  await sendMessage(userMessageText, notebookId.value);
+  // Pass the statisticalSummary to sendMessage
+  await sendMessage(userMessageText, notebookId.value, statisticalSummary.value);
 }
 
 </script>

@@ -66,8 +66,9 @@ async def upload_file(
     temp_path = os.path.join(temp_dir, file.filename)
 
     try:
+        content = await file.read()
         with open(temp_path, "wb") as f:
-            f.write(file.file.read())
+            f.write(content)
 
         # Step 1: Analyze data and get the analysis summary
         analysis_summary = process_spreadsheet_in_chunks(temp_path, file.filename)
@@ -89,15 +90,21 @@ async def upload_file(
         else:
             logger.warning("Could not construct data_schema: analysis_summary is missing required keys.")
 
-        # Step 3: Define storage path and create the notebook record with all required fields
+        # Step 3: Define storage path and upload the original file
         storage_path = f"uploads/{current_user.id}/{uuid.uuid4()}/{file.filename}"
+        logger.info(f"Attempting to upload file to Supabase Storage at: {storage_path}")
+        upload_response = supabase.storage.from_("mardata-files").upload(
+            path=storage_path,
+            file=content,
+            file_options={"content-type": file.content_type}
+        )
+        logger.info(f"Supabase Storage upload response: {upload_response}")
         
         notebook_data = {
             "user_id": str(current_user.id),
             "title": business_problem[:100],
             "analysis_cache": analysis_summary,
-            "original_file_path": storage_path, # Add this field
-            "data_schema": data_schema          # Add this field
+            "data_schema": data_schema
         }
         logger.info(f"Attempting to insert notebook with data_schema: {data_schema}")
         notebook_response = supabase.table("notebooks").insert(notebook_data).execute()
@@ -111,7 +118,7 @@ async def upload_file(
             "storage_path": storage_path,
             "file_name": file.filename,
             "file_type": file.content_type,
-            "file_size_bytes": file.size
+            "file_size_bytes": len(content) # Use len(content) for file size
         }
         supabase.table("files").insert(file_data).execute()
 
@@ -131,7 +138,8 @@ async def upload_file(
         return {
             "notebook_id": notebook_id,
             "filename": file.filename,
-            "message": "File uploaded. Analysis has started and will be streamed.",
+            "analysis_summary": analysis_summary,
+            "message": "File uploaded. Analysis has started.",
         }
 
     except ValueError as e:

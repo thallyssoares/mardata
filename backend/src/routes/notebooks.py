@@ -1,7 +1,7 @@
 """API routes for notebooks."""
 from fastapi import APIRouter, Depends, HTTPException, status
 from supabase import Client
-from typing import List
+from typing import List, Dict, Any
 from uuid import UUID
 from datetime import datetime
 from pydantic import BaseModel
@@ -40,6 +40,7 @@ class File(BaseModel):
 class NotebookDetails(Notebook):
     messages: List[Message] = []
     files: List[File] = []
+    analysis_cache: Dict[str, Any] | None = None
 
 router = APIRouter()
 
