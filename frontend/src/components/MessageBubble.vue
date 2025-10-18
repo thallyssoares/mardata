@@ -12,25 +12,25 @@
       ]"
     >
       <Avatar :class="['h-8 w-8', isUser ? 'ml-2' : 'mr-2']">
-        <AvatarImage :src="avatarSrc" :alt="message.role" />
+        <AvatarImage :src="avatarSrc" :alt="message.sender" />
         <AvatarFallback :class="avatarFallbackClass">
-          {{ avatarFallbackText }}
+          {{ message.sender.substring(0, 2) }}
         </AvatarFallback>
       </Avatar>
 
       <div :class="['flex flex-col', isUser ? 'items-end' : 'items-start']">
         <Card :class="bubbleClasses">
           <CardContent class="p-3">
-            <div v-if="isAssistant">
-              <MarkdownRenderer :markdown="message.content" />
+            <div v-if="message.sender === 'AI'">
+              <MarkdownRenderer :markdown="message.text" />
             </div>
             <p v-else class="text-sm whitespace-pre-wrap leading-relaxed">
-              {{ message.content }}
+              {{ message.text }}
             </p>
           </CardContent>
         </Card>
         <span class="text-xs text-foam-500 mt-1 px-2">
-          {{ formatTime(message.created_at) }}
+          {{ formatTime(message.timestamp) }}
         </span>
       </div>
     </div>
@@ -50,23 +50,14 @@ const props = defineProps({
   },
 })
 
-const isUser = computed(() => props.message.role === 'user')
-const isAssistant = computed(() => props.message.role === 'assistant')
-const isSystem = computed(() => props.message.role === 'system')
+const isUser = computed(() => props.message.sender === 'User')
+const isSystem = computed(() => props.message.sender === 'System')
 
 const avatarSrc = computed(() => {
   if (isUser.value) {
-    return 'https://github.com/radix-vue.png' // Placeholder for user avatar
+    return 'https://github.com/radix-vue.png'
   }
-  // AI/System avatar
-  return 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y' 
-})
-
-const avatarFallbackText = computed(() => {
-  if (isUser.value) return 'U'
-  if (isAssistant.value) return 'AI'
-  if (isSystem.value) return 'S'
-  return ''
+  return 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'
 })
 
 const avatarFallbackClass = computed(() => {
@@ -76,7 +67,6 @@ const avatarFallbackClass = computed(() => {
   if (isSystem.value) {
     return 'bg-foam-300 text-foam-700'
   }
-  // Assistant
   return 'ocean-gradient text-white font-semibold'
 })
 
@@ -88,7 +78,6 @@ const bubbleClasses = computed(() => {
   if (isSystem.value) {
     return `${base} bg-foam-100 text-foam-700 border-foam-200`
   }
-  // Assistant
   return `${base} bg-white text-foam-900 border-ocean-100 hover:shadow-ocean-md`
 })
 

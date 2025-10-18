@@ -5,41 +5,19 @@ const VITE_API_WEBSOCKET_URL = import.meta.env.VITE_API_WEBSOCKET_URL || 'ws://l
 
 export function useChat() {
   const messages = ref([])
-  const notebookTitle = ref('Nova Análise')
-  const uploadedFiles = ref([])
   const isLoading = ref(false)
-  const isHistoryLoading = ref(false)
   let socket = null;
 
-  const addMessage = (role, content, type = 'text', isStreaming = false) => {
+  const addMessage = (sender, text, type = 'text', isStreaming = false) => {
     messages.value.push({
       id: Date.now() + Math.random(),
-      role,
-      content,
+      sender,
+      text,
       type,
       isStreaming,
-      created_at: new Date().toISOString(),
+      timestamp: new Date().toISOString(),
     })
   }
-
-  const loadNotebook = async (notebookId) => {
-    isHistoryLoading.value = true;
-    clearMessages();
-    try {
-      const response = await apiClient.get(`/notebooks/${notebookId}`);
-      const notebook = response.data;
-      notebookTitle.value = notebook.title;
-      uploadedFiles.value = notebook.files;
-      // The backend returns messages with role/content, which now matches our format
-      messages.value = notebook.messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-      connectWebSocket(notebookId);
-    } catch (error) {
-      console.error('Error loading notebook:', error);
-      addMessage('System', `Erro ao carregar o notebook: ${error.message}`);
-    } finally {
-      isHistoryLoading.value = false;
-    }
-  };
 
   const connectWebSocket = (notebookId) => {
     if (socket) {
@@ -59,19 +37,21 @@ export function useChat() {
       const lastMessage = messages.value.length > 0 ? messages.value[messages.value.length - 1] : null;
 
       if (data.type === 'progress') {
+        // If the last message was a progress message, replace it. Otherwise, add a new one.
         if (lastMessage && lastMessage.type === 'progress') {
           messages.value.pop();
         }
-        addMessage('system', `Agente [${data.agent}]: ${data.status}...`, 'progress');
+        addMessage('System', `Agente [${data.agent}]: ${data.status}...`, 'progress');
       } else if (data.type === 'token') {
-        isLoading.value = false; 
+        isLoading.value = false; // Analysis has started, hide main loader
         if (lastMessage && lastMessage.isStreaming) {
-          lastMessage.content += data.content;
+          lastMessage.text += data.content;
         } else {
+          // First token, remove progress message and add a new streaming message
           if (lastMessage && lastMessage.type === 'progress') {
             messages.value.pop();
           }
-          addMessage('assistant', data.content, 'text', true);
+          addMessage('AI', data.content, 'text', true);
         }
       } else if (data.type === 'stream_end') {
         if (lastMessage && lastMessage.isStreaming) {
@@ -81,7 +61,7 @@ export function useChat() {
         if (lastMessage && lastMessage.type === 'progress') {
           messages.value.pop();
         }
-        addMessage('system', `Erro na análise: ${data.message}`, 'text');
+        addMessage('System', `Erro na análise: ${data.message}`, 'text');
         isLoading.value = false;
       }
     };
@@ -92,7 +72,7 @@ export function useChat() {
 
     socket.onerror = (error) => {
       console.error('WebSocket error:', error);
-      addMessage('system', 'WebSocket connection error.', 'text');
+      addMessage('System', 'WebSocket connection error.', 'text');
       isLoading.value = false;
     };
   };
@@ -107,42 +87,33 @@ export function useChat() {
   const sendMessage = async (text, notebookId) => {
     if (!text.trim()) return
 
-    addMessage('user', text)
+    addMessage('User', text)
     isLoading.value = true
 
     try {
-      // The backend will now process the request asynchronously.
-      // The response will be streamed via WebSocket.
-      await apiClient.post(`/chat/${notebookId}`, { question: text })
-      // We don't add the assistant message here anymore.
-      // The WebSocket 'onmessage' handler will do it.
+      const response = await apiClient.post(`/chat/${notebookId}`, { question: text })
+      const result = response.data
+      addMessage('assistant', result.answer)
     } catch (error) {
       console.error('Error sending message:', error)
       const errorMessage = error.response?.data?.detail || error.message
       addMessage('system', `Error: ${errorMessage}`)
-      isLoading.value = false // Stop loading on API error
-    } 
-    // We no longer set isLoading to false here.
-    // It will be set to false by the WebSocket onmessage handler when the first token arrives.
+    } finally {
+      isLoading.value = false
+    }
   }
 
   const clearMessages = () => {
     messages.value = []
-    uploadedFiles.value = []
-    notebookTitle.value = 'Nova Análise'
   }
 
   return {
     messages,
-    notebookTitle,
-    uploadedFiles,
     isLoading,
-    isHistoryLoading,
     addMessage,
     sendMessage,
     clearMessages,
     connectWebSocket,
     disconnectWebSocket,
-    loadNotebook,
   }
 }
