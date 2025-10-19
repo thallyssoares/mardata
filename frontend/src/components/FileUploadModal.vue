@@ -146,9 +146,19 @@ async function uploadAndAnalyze() {
     const { presigned_url, storage_path, notebook_id } = presignedUrlResponse.data;
 
     // Step 2: Upload file to Supabase
-    await apiClient.put(presigned_url, file, {
-      headers: { 'Content-Type': file.type },
+    const uploadResponse = await fetch(presigned_url, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': file.type,
+      },
+      body: file,
     });
+
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text();
+      console.error('Supabase upload error:', errorText);
+      throw new Error('Failed to upload file to Supabase.');
+    }
 
     // Step 3: Notify backend to process the file
     const processFormData = new FormData();

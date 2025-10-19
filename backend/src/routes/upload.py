@@ -1,4 +1,3 @@
-
 import uuid
 import tempfile
 import os
@@ -10,7 +9,7 @@ from ..services.chunk_processing import process_spreadsheet_in_chunks
 from ..services.ai_service import get_ai_insights
 from ..services.optimization_service import convert_to_parquet_and_update_record
 from ..lib.dependencies import get_current_user
-from ..lib.supabase_client import get_supabase_client
+from ..lib.supabase_client import get_supabase_client, supabase_url
 from ..models.user import User
 
 router = APIRouter()
@@ -63,14 +62,16 @@ async def create_presigned_url(
     """
     try:
         # Step 1: Create a unique path for the file in storage
-        storage_path = f"uploads/{current_user.id}/{uuid.uuid4()}/{file_name}"
+        storage_path = f"{current_user.id}/uploads/{uuid.uuid4()}/{file_name}"
         
         # Step 2: Generate a presigned URL from Supabase Storage
-        presigned_url_response = supabase.storage.from_("mardata-files").create_signed_url(
-            path=storage_path,
-            expires_in=3600,  # URL is valid for 1 hour
+        presigned_url_response = supabase.storage.from_("mardata-files").create_signed_upload_url(
+            path=storage_path
         )
         
+        # The response from Supabase is a relative URL, so we need to construct the full URL
+        absolute_presigned_url = f"{supabase_url}/{presigned_url_response['signed_url']}"
+
         # Step 3: Create the notebook record in the database
         notebook_data = {
             "user_id": str(current_user.id),
@@ -90,9 +91,9 @@ async def create_presigned_url(
         }
         supabase.table("files").insert(file_data).execute()
 
-        # Step 5: Return the presigned URL and notebook ID
+        # Step 5: Return the absolute presigned URL and notebook ID
         return {
-            "presigned_url": presigned_url_response['signedURL'],
+            "presigned_url": absolute_presigned_url,
             "storage_path": storage_path,
             "notebook_id": notebook_id,
         }
@@ -142,11 +143,11 @@ async def process_uploaded_file(
             "analysis_cache": analysis_summary,
             "data_schema": data_schema,
         }
-        supabase.table("notebooks").update(update_data).eq("id", notebook_id).execute()
+        supabase.table("notebooks").update(update_data).eq("id", notebook_id).eq("user_id", str(current_user.id)).execute()
         
         # Step 4: Get file size and update the file record
         file_size_bytes = os.path.getsize(temp_path)
-        supabase.table("files").update({"file_size_bytes": file_size_bytes}).eq("storage_path", storage_path).execute()
+        supabase.table("files").update({"file_size_bytes": file_size_bytes}).eq("storage_path", storage_path).eq("user_id", str(current_user.id)).execute()
 
         # Step 5: Add the AI analysis and Parquet conversion to background tasks
         background_tasks.add_task(
