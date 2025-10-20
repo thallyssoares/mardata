@@ -99,7 +99,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import apiClient from '@/lib/apiClient';
+import { uploadFile } from '@/lib/apiClient';
 
 const businessProblem = ref('');
 const selectedFile = ref(null);
@@ -133,43 +133,11 @@ async function uploadAndAnalyze() {
 
   isUploading.value = true;
   errorMessage.value = null;
-  const file = selectedFile.value;
 
   try {
-    // Step 1: Get presigned URL
-    const presignedUrlFormData = new FormData();
-    presignedUrlFormData.append('business_problem', businessProblem.value);
-    presignedUrlFormData.append('file_name', file.name);
-    presignedUrlFormData.append('file_type', file.type);
+    const response = await uploadFile(businessProblem.value, selectedFile.value);
+    const { notebook_id } = response.data;
 
-    const presignedUrlResponse = await apiClient.post('/upload/presigned-url/', presignedUrlFormData);
-    const { presigned_url, storage_path, notebook_id } = presignedUrlResponse.data;
-
-    // Step 2: Upload file to Supabase
-    const uploadResponse = await fetch(presigned_url, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': file.type,
-      },
-      body: file,
-    });
-
-    if (!uploadResponse.ok) {
-      const errorText = await uploadResponse.text();
-      console.error('Supabase upload error:', errorText);
-      throw new Error('Failed to upload file to Supabase.');
-    }
-
-    // Step 3: Notify backend to process the file
-    const processFormData = new FormData();
-    processFormData.append('notebook_id', notebook_id);
-    processFormData.append('business_problem', businessProblem.value);
-    processFormData.append('file_name', file.name);
-    processFormData.append('storage_path', storage_path);
-
-    await apiClient.post('/process-upload/', processFormData);
-
-    // Step 4: Emit success and close
     emit('upload-success', { notebook_id });
     emit('close');
 

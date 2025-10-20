@@ -169,7 +169,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 
-import apiClient from '@/lib/apiClient';
+import { uploadFile } from '@/lib/apiClient';
 
 const selectedFiles = ref([])
 const businessProblem = ref('')
@@ -204,35 +204,10 @@ async function uploadFiles() {
   const file = selectedFiles.value[0];
 
   try {
-    // Step 1: Get presigned URL from the backend
-    const presignedUrlFormData = new FormData();
-    presignedUrlFormData.append('business_problem', businessProblem.value);
-    presignedUrlFormData.append('file_name', file.name);
-    presignedUrlFormData.append('file_type', file.type);
+    const response = await uploadFile(businessProblem.value, file);
+    const { notebook_id } = response.data;
 
-    const presignedUrlResponse = await apiClient.post('/upload/presigned-url/', presignedUrlFormData);
-    const { presigned_url, storage_path, notebook_id } = presignedUrlResponse.data;
-
-    // Step 2: Upload the file directly to Supabase Storage
-    await apiClient.put(presigned_url, file, {
-      headers: { 'Content-Type': file.type },
-    });
-
-    // Step 3: Notify the backend to process the uploaded file
-    const processFormData = new FormData();
-    processFormData.append('notebook_id', notebook_id);
-    processFormData.append('business_problem', businessProblem.value);
-    processFormData.append('file_name', file.name);
-    processFormData.append('storage_path', storage_path);
-
-    const processResponse = await apiClient.post('/process-upload/', processFormData);
-
-    // Step 4: Emit success event
-    emits('files-uploaded', {
-      files: selectedFiles.value,
-      notebook_id: notebook_id,
-      aiInsight: processResponse.data.ai_insight, // Or however you get this now
-    });
+    emits('files-uploaded', { notebook_id });
 
     // Reset state
     selectedFiles.value = [];

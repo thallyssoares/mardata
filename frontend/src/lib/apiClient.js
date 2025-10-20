@@ -22,4 +22,17 @@ apiClient.interceptors.request.use(async (config) => {
   return Promise.reject(error);
 });
 
+// New function to handle direct file upload
+export const uploadFile = async (businessProblem, file) => {
+  const formData = new FormData();
+  formData.append('business_problem', businessProblem);
+  formData.append('file', file);
+
+  return apiClient.post('/upload/', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+};
+
 export default apiClient;
