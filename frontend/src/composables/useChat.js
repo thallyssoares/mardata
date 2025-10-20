@@ -18,20 +18,20 @@ export function useChat() {
     })
   }
 
-  const sendMessage = async (text, notebookId, statisticalSummary) => { 
+  const sendMessage = async (text, notebookId, statisticalSummary, loadNotebook) => { 
     if (!text.trim()) return
 
-    addMessage('User', text)
     isLoading.value = true
 
     try {
-      const response = await apiClient.post(`/chat/${notebookId}`, {
+      await apiClient.post(`/chat/${notebookId}`, {
         question: text,
         chat_history: messages.value, 
         statistical_summary: statisticalSummary, 
       })
-      const result = response.data
-      addMessage('AI', result.response)
+      if(loadNotebook) {
+        await loadNotebook();
+      }
     } catch (error) { 
       console.error('Error sending message:', error)
       const errorMessage = error.response?.data?.detail || error.message

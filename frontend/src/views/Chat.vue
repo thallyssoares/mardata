@@ -131,7 +131,7 @@ async function handleSendMessage(userMessageText) {
     return;
   }
   // Pass the statisticalSummary to sendMessage
-  await sendMessage(userMessageText, notebookId.value, statisticalSummary.value);
+  await sendMessage(userMessageText, notebookId.value, statisticalSummary.value, () => loadNotebook(notebookId.value));
 }
 
 </script>

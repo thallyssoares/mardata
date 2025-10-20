@@ -46,6 +46,8 @@ def build_code_or_text_prompt(chat_history: list, new_question: str, original_an
 
     **RULES FOR CODE GENERATION:**
     - The DataFrame is pre-loaded in a variable named `df`.
+    - **`pandas` is already imported as `pd`. DO NOT include `import pandas as pd` in your code.**
+    - **Prioritize using built-in pandas functions (e.g., .mean(), .sum(), .groupby()) for efficiency and clarity. Avoid re-implementing basic calculations with `.apply()` and `lambda` if a built-in function exists.**
     - Your code will be executed via `exec()`. Use `print()` to output the result.
     - The code must be a single-line or multi-line string inside the JSON object.
     - DO NOT provide any explanation, just the JSON object.
@@ -61,25 +63,32 @@ def build_code_or_text_prompt(chat_history: list, new_question: str, original_an
     {new_question}
     """
 
-def build_synthesis_prompt(execution_result: str, new_question: str) -> str:
+def build_synthesis_prompt(execution_result: str, new_question: str, chat_history: list) -> str:
+    history_lines = []
+    for msg in chat_history:
+        role = "User" if msg.get("role") == "user" else "Assistant"
+        history_lines.append(f"{role}: {msg.get('content', '')}")
+    history_str = "\n".join(history_lines)
+
     return f"""
     # SYSTEM PROMPT
-    You are a data analysis assistant. Your task is to translate a raw data analysis result into a clear, friendly, and concise answer in Brazilian Portuguese.
+    You are a data analysis assistant. Your task is to translate a raw data analysis result into a clear, friendly, and concise answer in Brazilian Portuguese, taking into account the entire conversation history.
 
     **Context:**
-    - User's Original Question: "{new_question}"
+    - Conversation History: {history_str}
+    - User's Last Question: "{new_question}"
     - Raw Data Result from Code Execution: {execution_result}
 
     **Instruction:**
-    Formulate a natural language response based on the data provided. Be direct and helpful.
+    Formulate a natural language response that directly answers the user's last question, using the provided data and the context of the conversation. Be direct, helpful, and connect your answer to the previous messages if relevant.
     """
 
-def get_follow_up_insight(original_analysis: str, chat_history: list, new_question: str, file_path: str, supabase_client: Client) -> str:
+def get_follow_up_insight(original_analysis: dict, chat_history: list, new_question: str, file_path: str, supabase_client: Client) -> str:
     """
     Generates a response to a follow-up question, potentially by executing new code.
     """
     # 1. First attempt: Ask the LLM to either answer directly or generate code.
-    prompt1 = build_code_or_text_prompt(chat_history, new_question, original_analysis)
+    prompt1 = build_code_or_text_prompt(chat_history, new_question, json.dumps(original_analysis, indent=2))
     llm_response_str = llm_llama_70b.invoke(prompt1).content
     logger.info(f"LLM raw response: {llm_response_str}") # Log raw response
 
@@ -114,7 +123,7 @@ def get_follow_up_insight(original_analysis: str, chat_history: list, new_questi
             execution_result = code_executor.execute_sandboxed_code(df, code_to_execute)
 
             # 2. Second attempt: Synthesize the result into a natural language answer
-            prompt2 = build_synthesis_prompt(execution_result, new_question)
+            prompt2 = build_synthesis_prompt(execution_result, new_question, chat_history)
             final_answer = llm_llama_70b.invoke(prompt2).content
             return final_answer
 

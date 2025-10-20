@@ -40,11 +40,12 @@ async def chat_with_data(
         notebook = notebook_response.data
         
         # 2. Save user's question
-        supabase.table("messages").insert({
+        user_message_response = supabase.table("messages").insert({
             "notebook_id": notebook_id,
             "role": "user",
             "content": payload.question
         }).execute()
+        logger.info(f"User message saved: {user_message_response.data}")
 
         # 3. Get the file path
         if not notebook.get('files'):
@@ -62,11 +63,12 @@ async def chat_with_data(
         )
 
         # 5. Save AI's response to the database
-        supabase.table("messages").insert({
+        ai_message_response = supabase.table("messages").insert({
             "notebook_id": notebook_id,
             "role": "assistant",
             "content": ai_response
         }).execute()
+        logger.info(f"AI message saved: {ai_message_response.data}")
 
         return {"response": ai_response}
 
